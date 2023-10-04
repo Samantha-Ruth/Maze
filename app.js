@@ -11,16 +11,17 @@
 // Need to introduce more arrays: Verticals (to keep track of vertical walls) and Horizontals (to keep track of horizontal walls)
 // True = no wall, False = wall
 
-const { Engine, Render, Runner, World, Bodies } = Matter;
+const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
 
-const cells = 3;
+const cells = 6;
 const width = 600;
 const height = 600;
 
 const unitLength = width / cells;
-const unitHeight = height / cells;
 
 const engine = Engine.create();
+// disable gravity
+engine.world.gravity.y = 0;
 const { world } = engine;
 const render = Render.create({
   element: document.body,
@@ -36,10 +37,10 @@ Runner.run(Runner.create(), engine);
 
 // Walls
 const walls = [
-  Bodies.rectangle(width / 2, 0, width, 40, { isStatic: true }),
-  Bodies.rectangle(width / 2, height, width, 40, { isStatic: true }),
-  Bodies.rectangle(0, height / 2, 40, height, { isStatic: true }),
-  Bodies.rectangle(width, height / 2, 40, height, { isStatic: true }),
+  Bodies.rectangle(width / 2, 0, width, 2, { isStatic: true }),
+  Bodies.rectangle(width / 2, height, width, 2, { isStatic: true }),
+  Bodies.rectangle(0, height / 2, 2, height, { isStatic: true }),
+  Bodies.rectangle(width, height / 2, 2, height, { isStatic: true }),
 ];
 World.add(world, walls);
 
@@ -60,24 +61,13 @@ const shuffle = (array) => {
 
   return array;
 };
-// Maze generation
-//  const grid = [];
-
-//  for (let i = 0; i< 3; i++) {
-//     grid.push([]);
-//     for (let j = 0; j<3; j++) {
-//         grid[i].push(false);
-//     }
-//  }
-
-//  console.log(grid)
 
 // Buid 3x3 grid
 const grid = Array(cells)
   .fill(null)
   .map(() => Array(cells).fill(false));
 // Build 3x2 grid
-// iterate over
+// iterate over verticals at bottom of code
 const verticals = Array(cells)
   .fill(null)
   .map(() => Array(cells - 1).fill(false));
@@ -160,8 +150,9 @@ horizontals.forEach((row, rowIindex) => {
       columnIndex * unitLength + unitLength / 2,
       rowIindex * unitLength + unitLength,
       unitLength,
-      10,
+      5,
       {
+        label: 'wall',
         isStatic: true,
       }
     );
@@ -172,20 +163,86 @@ horizontals.forEach((row, rowIindex) => {
 // Iterating over vertical walls, to CREATE MAZE
 
 verticals.forEach((row, rowIndex) => {
-    row.forEach((open, columnIndex) => {
-        if (open) {
-            return;
-        }
-    
+  row.forEach((open, columnIndex) => {
+    if (open) {
+      return;
+    }
+
     const wall = Bodies.rectangle(
-        columnIndex * unitLength + unitLength,
-        rowIndex * unitLength + unitLength/2, 
-        10,
-        unitLength,
-        {
-            isStatic: true,
-        }
+      columnIndex * unitLength + unitLength,
+      rowIndex * unitLength + unitLength / 2,
+      5,
+      unitLength,
+      {
+        label: 'wall',
+        isStatic: true,
+      }
     );
     World.add(world, wall);
-    });
+  });
+});
+
+// Find coordinates for middle of the goal; widgth - 1/2 of cell, height - 1/2 of cell
+const goal = Bodies.rectangle(
+  width - unitLength / 2,
+  height - unitLength / 2,
+  unitLength * 0.7,
+  unitLength * 0.7,
+  {
+    label: "goal",
+    isStatic: true,
+  }
+);
+World.add(world, goal);
+
+// Ball
+
+const ball = Bodies.circle(
+  unitLength / 2,
+  unitLength / 2,
+  unitLength * 0.25,
+  // custom label for winning collision
+  {
+    label: "ball",
+  }
+);
+World.add(world, ball);
+document.addEventListener("keydown", (event) => {
+  // Find key code of letter keys. Use code as keyCode is deprecated
+  var key = event.code || event.keyCode;
+  // to move ball, look at current velocity and change it. Get the Body property to change properties of a shape and look at velocy
+  const { x, y } = ball.velocity;
+
+  if (key === "KeyW" || key === 87) {
+    Body.setVelocity(ball, { x, y: y - 5 });
+  } else if (key === "KeyD" || key === 68) {
+    Body.setVelocity(ball, { x: x + 5, y });
+  } else if (key === "KeyS" || key === 83) {
+    Body.setVelocity(ball, { x, y: y + 5 });
+  } else if (key === "KeyA" || key === 65) {
+    Body.setVelocity(ball, { x: x - 5, y });
+  }
+});
+
+// Win Condition is a Detect collision event.  Pull Events out of Matter properties
+Events.on(engine, "collisionStart", (event) => {
+  // One single event object that matter.js owns. Constantly updating.
+  event.pairs.forEach((collision) => {
+    const labels = ["ball", "goal"];
+
+    if (
+      labels.includes(collision.bodyA.label) &&
+      labels.includes(collision.bodyB.label)
+    ) {
+      console.log("User won!");
+      // Turn gravity back on
+      world.gravity.y = 1;
+      // make walls fall down. Add label to vertical and horizontal walls, then iterate over walls
+      world.bodies.forEach(body => {
+        if(body.label === 'wall') {
+            Body.setStatic(body, false);
+        }
+      })
+    }
+  });
 });
