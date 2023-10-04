@@ -13,11 +13,13 @@
 
 const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
 
-const cells = 6;
-const width = 600;
-const height = 600;
+const cellsHorizontal = 4;
+const cellsVertical = 3;
+const width = window.innerWidth;
+const height = window.innerHeight;
 
-const unitLength = width / cells;
+const unitLengthX = width / cellsHorizontal;
+const unitLengthY = height / cellsVertical;
 
 const engine = Engine.create();
 // disable gravity
@@ -27,7 +29,7 @@ const render = Render.create({
   element: document.body,
   engine: engine,
   options: {
-    wireframes: true,
+    wireframes: false,
     width,
     height,
   },
@@ -63,23 +65,23 @@ const shuffle = (array) => {
 };
 
 // Buid 3x3 grid
-const grid = Array(cells)
+const grid = Array(cellsVertical)
   .fill(null)
-  .map(() => Array(cells).fill(false));
+  .map(() => Array(cellsHorizontal).fill(false));
 // Build 3x2 grid
 // iterate over verticals at bottom of code
-const verticals = Array(cells)
+const verticals = Array(cellsVertical)
   .fill(null)
-  .map(() => Array(cells - 1).fill(false));
+  .map(() => Array(cellsHorizontal - 1).fill(false));
 // Build 2x3 grid
 // iterate over horizontals at the bottom of code:
-const horizontals = Array(cells - 1)
+const horizontals = Array(cellsVertical - 1)
   .fill(null)
-  .map(() => Array(cells).fill(false));
+  .map(() => Array(cellsHorizontal).fill(false));
 
 // start at random starting point
-const startRow = Math.floor(Math.random() * cells);
-const startColumn = Math.floor(Math.random() * cells);
+const startRow = Math.floor(Math.random() * cellsVertical);
+const startColumn = Math.floor(Math.random() * cellsHorizontal);
 
 const iterateThroughMaze = (row, column) => {
   // If I have visited the cell at [row,column], then return
@@ -108,9 +110,9 @@ const iterateThroughMaze = (row, column) => {
     // check to see if that neighbor is out of bounds (ie, off the grid)
     if (
       nextRow < 0 ||
-      nextRow >= cells ||
+      nextRow >= cellsVertical ||
       nextColumn < 0 ||
-      nextColumn >= cells
+      nextColumn >= cellsHorizontal
     ) {
       continue;
     }
@@ -147,13 +149,16 @@ horizontals.forEach((row, rowIindex) => {
     }
 
     const wall = Bodies.rectangle(
-      columnIndex * unitLength + unitLength / 2,
-      rowIindex * unitLength + unitLength,
-      unitLength,
+      columnIndex * unitLengthX + unitLengthX / 2,
+      rowIindex * unitLengthY + unitLengthY,
+      unitLengthX,
       5,
       {
         label: 'wall',
         isStatic: true,
+        render: {
+            fillStyle: 'purple'
+        }
       }
     );
     World.add(world, wall);
@@ -169,13 +174,16 @@ verticals.forEach((row, rowIndex) => {
     }
 
     const wall = Bodies.rectangle(
-      columnIndex * unitLength + unitLength,
-      rowIndex * unitLength + unitLength / 2,
+      columnIndex * unitLengthX + unitLengthX,
+      rowIndex * unitLengthY + unitLengthY / 2,
       5,
-      unitLength,
+      unitLengthY,
       {
         label: 'wall',
         isStatic: true,
+        render: {
+            fillStyle: 'purple'
+        }
       }
     );
     World.add(world, wall);
@@ -184,26 +192,32 @@ verticals.forEach((row, rowIndex) => {
 
 // Find coordinates for middle of the goal; widgth - 1/2 of cell, height - 1/2 of cell
 const goal = Bodies.rectangle(
-  width - unitLength / 2,
-  height - unitLength / 2,
-  unitLength * 0.7,
-  unitLength * 0.7,
+  width - unitLengthX / 2,
+  height - unitLengthY / 2,
+  unitLengthX * 0.7,
+  unitLengthY * 0.7,
   {
     label: "goal",
     isStatic: true,
+    render: {
+        fillStyle: 'green'
+    }
   }
 );
 World.add(world, goal);
 
 // Ball
-
+const ballRadius = Math.min(unitLengthX, unitLengthY) / 4;
 const ball = Bodies.circle(
-  unitLength / 2,
-  unitLength / 2,
-  unitLength * 0.25,
+  unitLengthX / 2,
+  unitLengthY / 2,
+  ballRadius,
   // custom label for winning collision
   {
     label: "ball",
+    render: {
+        fillStyle: 'blue'
+    }
   }
 );
 World.add(world, ball);
@@ -234,7 +248,7 @@ Events.on(engine, "collisionStart", (event) => {
       labels.includes(collision.bodyA.label) &&
       labels.includes(collision.bodyB.label)
     ) {
-      console.log("User won!");
+      document.querySelector('.winner').classList.remove('hidden');
       // Turn gravity back on
       world.gravity.y = 1;
       // make walls fall down. Add label to vertical and horizontal walls, then iterate over walls
