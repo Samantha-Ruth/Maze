@@ -17,6 +17,9 @@ const cells = 3;
 const width = 600;
 const height = 600;
 
+const unitLength = width / cells;
+const unitHeight = height / cells;
+
 const engine = Engine.create();
 const { world } = engine;
 const render = Render.create({
@@ -74,10 +77,12 @@ const grid = Array(cells)
   .fill(null)
   .map(() => Array(cells).fill(false));
 // Build 3x2 grid
+// iterate over
 const verticals = Array(cells)
   .fill(null)
   .map(() => Array(cells - 1).fill(false));
 // Build 2x3 grid
+// iterate over horizontals at the bottom of code:
 const horizontals = Array(cells - 1)
   .fill(null)
   .map(() => Array(cells).fill(false));
@@ -98,10 +103,10 @@ const iterateThroughMaze = (row, column) => {
   // Assemble randomly ordered list of neighbors
   // javascript has no ability to randomize items within an array. Create Shuffle function
   const neighbors = shuffle([
-    // [row - 1, column, 'up'],
-    // [row, column + 1, 'right'],
-    [row + 1, column, 'down'],
-    [row, column - 1, 'left'],
+    [row - 1, column, "up"],
+    [row, column + 1, "right"],
+    [row + 1, column, "down"],
+    [row, column - 1, "left"],
   ]);
 
   // for each neighbor...
@@ -111,27 +116,76 @@ const iterateThroughMaze = (row, column) => {
     const [nextRow, nextColumn, direction] = neighbor;
 
     // check to see if that neighbor is out of bounds (ie, off the grid)
-    if (nextRow < 0 || nextRow >= cells || nextColumn < 0 || nextColumn >= cells) {
+    if (
+      nextRow < 0 ||
+      nextRow >= cells ||
+      nextColumn < 0 ||
+      nextColumn >= cells
+    ) {
       continue;
-  }
+    }
     // check to see if we have visited that neighbor, continue to next neighbor
-  if (grid[nextRow][nextColumn]) {
-    continue;
-  }
+    if (grid[nextRow][nextColumn]) {
+      continue;
+    }
 
     // remove a wall from either horizontals or verticals array
-    if (direction === 'left') {
-        verticals[row][column -1] = true;
-    } else if (direction === 'right') {
-        verticals[row][column] = true;
-    } else if (direction === 'up') {
-        horizontals[row -1][column] = true;
-    } else if (direction === 'down') {
-        horizontals[row][column] = true;
+    if (direction === "left") {
+      verticals[row][column - 1] = true;
+    } else if (direction === "right") {
+      verticals[row][column] = true;
+    } else if (direction === "up") {
+      horizontals[row - 1][column] = true;
+    } else if (direction === "down") {
+      horizontals[row][column] = true;
     }
+
+    iterateThroughMaze(nextRow, nextColumn);
   }
 
   // Visit that next cell, call iterateThroughMaze again and enter current row,column
 };
 
-iterateThroughMaze(1, 1);
+iterateThroughMaze(startRow, startColumn);
+
+// Iterating over horizontal walls, to CREATE MAZE
+
+horizontals.forEach((row, rowIindex) => {
+  row.forEach((open, columnIndex) => {
+    if (open) {
+      return;
+    }
+
+    const wall = Bodies.rectangle(
+      columnIndex * unitLength + unitLength / 2,
+      rowIindex * unitLength + unitLength,
+      unitLength,
+      10,
+      {
+        isStatic: true,
+      }
+    );
+    World.add(world, wall);
+  });
+});
+
+// Iterating over vertical walls, to CREATE MAZE
+
+verticals.forEach((row, rowIndex) => {
+    row.forEach((open, columnIndex) => {
+        if (open) {
+            return;
+        }
+    
+    const wall = Bodies.rectangle(
+        columnIndex * unitLength + unitLength,
+        rowIndex * unitLength + unitLength/2, 
+        10,
+        unitLength,
+        {
+            isStatic: true,
+        }
+    );
+    World.add(world, wall);
+    });
+});
